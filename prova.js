@@ -1,9 +1,19 @@
 var casper = require('casper').create();
 
-casper.start(casper.cli.get(0), function() {
-});
+var fs = require('fs');
+var file_h = fs.open('urls_list.txt', 'r');
+var line = file_h.readLine();
+
+while (line) {
+	line = file_h.readLine(); 
+}
+file_h.close();
+
+console.log(line);
 
 /* Casper configuration */
+casper.start(casper.cli.get(0), function() {
+});
 
 casper.on('remote.message', function(msg) {
     this.echo('remote message caught: ' + msg);
@@ -30,15 +40,53 @@ casper.then(function() {
 			},
 
 			/**
-			 * Give images a score depending on the average square size of all images (the bigger, the more score)
+			 * Return the image which has a biggest square size attribute
 			 * @param {NodeList} images
-			 * @param {Number} avg_square_size
+			 * @return {Node}
 			 */
-			scoreImagesBySquareSize: function(images, avg_square_size) {
-			
-				for (var i = 0; i < images.length; i++) {
-					if (images[i].square_size >= avg_square_size) {
-						images[i].score = images[i].square_size / avg_square_size
+
+			getBiggestSquareSizeImage: function(images) {
+
+				var biggest_square_size_image = images[0];
+
+				for (var i = 1; i < images.length; i++) {
+					if (images[i].square_size > biggest_square_size_image.square_size) {
+						biggest_square_size_image = images[i];
+					}
+				}
+
+				return biggest_square_size_image;
+			},
+
+			/**
+			 * Score images in comparison to the biggest square size image
+			 * @param {NodeList} images
+			 * @param {Number} max_points: how important is the square size for the overall score?
+			 */
+			scoreToBiggestSquareSizeImage: function(images, biggest_square_size, max_points) {
+				
+				for (var i=0; i < images.length; i++) {
+					if (images[i].square_size > 0) {
+						images[i].score = images[i].score + (images[i].square_size / biggest_square_size) * max_points; 
+					}
+				}
+			},
+
+			/**
+			 * Score images depending on their squareness
+			 * @param {NodeList} images
+			 * @param {Number} max_points: how important is squareness for the overall score?
+			 */
+
+			scoreToSquareness: function(images, max_points) {
+
+				for (var i=0; i < images.length; i++) {
+					if (images[i].square_size > 0) {
+						if (images[i].height > images[i].width) {
+							images[i].score = images[i].score + (images[i].width / images[i].height) * max_points; 
+						} else {
+							images[i].score = images[i].score + (images[i].height / images[i].width) * max_points; 
+						}
 					}
 				}
 			},
@@ -282,45 +330,59 @@ casper.then(function() {
 casper.then(function() {
 	this.evaluate(function() {
 
+		// Get product image
 		var images = parseAds.getAllImages();
 
-		/* Get product image */ 
-		parseAds.setSquareSizes(images);
+		// Initialize <img> elements
 		parseAds.initializeScores(images,0);
+		parseAds.setSquareSizes(images);
 
-		var avg_square_size = parseAds.getAverageSquareSize(images);
-		parseAds.scoreImagesBySquareSize(images,avg_square_size);
-		parseAds.penaltyBannerImages(images);
-		parseAds.prizeUpperImages(images);
+		var biggest_square_size_image = parseAds.getBiggestSquareSizeImage(images);
 
-		var biggest_image = parseAds.getImageWithBiggestScore(images,[]);
-		console.log("Product image is: " + biggest_image.src);
+		// Score images on comparison with the biggest image
+		parseAds.scoreToBiggestSquareSizeImage(images, biggest_square_size_image.square_size, 10);
 
-		// Try to get the logo from anchors background
-		var logos_anchors = parseAds.getAllAnchors();
-		parseAds.initializeScores(logos_anchors,0);
-		parseAds.scoreHrefRoot(logos_anchors);
-		parseAds.prizeTopImages(150,logos_anchors);
+		// Score images depending on how square they are
+		parseAds.scoreToSquareness(images,10);
 
-		// Try to get the logo from images
-		var logos = parseAds.getAllImages();
-		parseAds.setSquareSizes(logos);
-		parseAds.initializeScores(logos,0);
-		parseAds.prizeTopImages(150,logos);
-		parseAds.prizeWithLogoInName(logos);
-		parseAds.prizePNG(logos);
-		parseAds.scoreParentAnchor(logos);
+		/*console.log("SCORES RESULTS");*/
 
-   /*     for (var i = 0; i < images.length; i++) {*/
-			//if (images[i].score > 0) {
-				//console.log("Score for this logo: " + images[i].src);
-				//console.log("Score: " + images[i].score);
-			//}
+		//for (var i = 0; i < images.length; i++) {
+			//console.log("IMAGE SRC: " + images[i].src);
+			//console.log("IMAGE SCORE: " + images[i].score);
 		/*}*/
 
-		var best_logo = parseAds.getImageWithBiggestScore(logos,logos_anchors);
+		console.log("Best Product Image would be: ");
 
-		console.log("Best logo: " + best_logo.src);
+		console.log(parseAds.getImageWithBiggestScore(images,[]).src);
+
+
+		// Try to get the logo from anchors background
+		/*var logos_anchors = parseAds.getAllAnchors();*/
+		//parseAds.initializeScores(logos_anchors,0);
+		//parseAds.scoreHrefRoot(logos_anchors);
+		//parseAds.prizeTopImages(150,logos_anchors);
+
+		//// Try to get the logo from images
+		/*var logos = parseAds.getAllImages();*/
+		//parseAds.setSquareSizes(logos);
+		/*parseAds.initializeScores(logos,0);*/
+
+		//parseAds.prizeTopImages(150,logos);
+		//parseAds.prizeWithLogoInName(logos);
+		//parseAds.prizePNG(logos);
+		//parseAds.scoreParentAnchor(logos);
+
+   //[>     for (var i = 0; i < images.length; i++) {<]
+			////if (images[i].score > 0) {
+				////console.log("Score for this logo: " + images[i].src);
+				////console.log("Score: " + images[i].score);
+			////}
+		//[>}<]
+
+		//var best_logo = parseAds.getImageWithBiggestScore(logos,logos_anchors);
+
+		/*console.log("Best logo: " + best_logo.src);*/
 
 	});
 });
