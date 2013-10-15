@@ -80,6 +80,17 @@ casper.then(function() {
 				}
 			},
 
+			// High score images that are up the 50% of the viewport
+			prizeUpperImages: function(images) {
+				var client_height = document.documentElement.clientHeight;
+
+				for (var i = 0; i < images.length; i++) {
+					if (images[i].getBoundingClientRect().top > client_height*0,5) {
+						images[i].score = images[i].score + 50;
+					}
+				}
+			},
+
 			getAverageSquareSize: function(images) {
 
 				var n_images = images.length;
@@ -137,6 +148,16 @@ casper.then(function() {
 				}
 			},
 
+			//Sometimes the href is not pointing to the root, but it's actually the logo (just score if it says logo in url name, class or id
+			/*scoreHrefNonRoot: function(anchors) {*/
+
+				//for (var i = 0; i < anchors.length; i++) {
+					
+					//if (anchors[i].hasAttribute("class") &&  anchors[i].indexOf("logo") != -1) {
+					//}
+				//}	
+			/*},*/
+
 			scoreParentAnchor: function(images) {
 
 				var possible_hosts = parseAds.possibleHosts();
@@ -167,6 +188,8 @@ casper.then(function() {
 						anchor.src = window.getComputedStyle(parent_node).getPropertyValue("background-image").replace('url(','').replace(')','');
 					}
 				}
+
+				// Sometimes the anchor can have a 
 			},
 
 			possibleHosts: function() {
@@ -234,6 +257,7 @@ casper.then(function() {
 		var avg_square_size = parseAds.getAverageSquareSize(images);
 		parseAds.scoreImagesBySquareSize(images,avg_square_size);
 		parseAds.penaltyBannerImages(images);
+		parseAds.prizeUpperImages(images);
 
 		var biggest_image = parseAds.getImageWithBiggestScore(images,[]);
 		console.log("Product image is: " + biggest_image.src);
@@ -253,10 +277,10 @@ casper.then(function() {
 		parseAds.prizePNG(logos);
 		parseAds.scoreParentAnchor(logos);
 
-		/*for (var i = 0; i < logos_anchors.length; i++) {*/
-			//if (logos_anchors[i].score > 0) {
-				//console.log("Score for this logo: " + logos_anchors[i].href);
-				//console.log("Score: " + logos_anchors[i].score);
+   /*     for (var i = 0; i < images.length; i++) {*/
+			//if (images[i].score > 0) {
+				//console.log("Score for this logo: " + images[i].src);
+				//console.log("Score: " + images[i].score);
 			//}
 		/*}*/
 
