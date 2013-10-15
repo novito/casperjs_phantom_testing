@@ -9,23 +9,19 @@ casper.on('remote.message', function(msg) {
     this.echo('remote message caught: ' + msg);
 })
 
-function getProductImage()
-{
-	// Get all images
-	var images = document.getElementsByTagName('img'); 
 
-	// Get sizes of all images
-	
-	return images;
-}
-
-
-// Then find all pictures
 casper.then(function() {
+
 	this.evaluate(function() {
+
+		// Create namespace
 		window.parseAds = {
 
-			//Initialize score of all images to zero
+			/** 
+			 * Initialize score attributes of images to a value 
+			 * @param {NodeList} images
+			 * @param {Number} value
+			 */
 			initializeScores: function(images, value) {
 
 				for (var i = 0; i < images.length; i++){
@@ -33,7 +29,11 @@ casper.then(function() {
 				}
 			},
 
-			// Score images depending on their square size 
+			/**
+			 * Give images a score depending on the average square size of all images (the bigger, the more score)
+			 * @param {NodeList} images
+			 * @param {Number} avg_square_size
+			 */
 			scoreImagesBySquareSize: function(images, avg_square_size) {
 			
 				for (var i = 0; i < images.length; i++) {
@@ -43,6 +43,13 @@ casper.then(function() {
 				}
 			},
 
+			/**
+			 * Return image which score attribute is bigger than the rest
+			 * Two NodeList are given, one of <img> elements, and another one of <a>
+			 * @param {NodeList} images
+			 * @param {NodeList} anchor_images
+			 * @return {Node} 
+			 */
 			getImageWithBiggestScore: function(images,anchor_images) {
 
 				var best_scored_image = images[0];
@@ -62,7 +69,10 @@ casper.then(function() {
 				return best_scored_image;
 			},
 			
-			// Calculate square size of images
+			/**
+			 * Set square_size attribute for all images (width*height)
+			 * @param {NodeList} images
+			 */
 			setSquareSizes: function(images) {
 
 				for (var i = 0; i < images.length; i++){
@@ -70,7 +80,10 @@ casper.then(function() {
 				}
 			},	
 
-			// If proportions of images are likely to be a banner, penalty scores 
+			/**
+			 * Reduce score by half if the image is likely to be a banner
+			 * @param {NodeList} images
+			 */
 			penaltyBannerImages: function(images) {
 
 				for (var i = 0; i < images.length; i++) {
@@ -80,7 +93,10 @@ casper.then(function() {
 				}
 			},
 
-			// High score images that are up the 50% of the viewport
+			/**
+			 * Score up images that are in the top half size of the page
+			 * @param {NodeList} images
+			 */
 			prizeUpperImages: function(images) {
 				var client_height = document.documentElement.clientHeight;
 
@@ -91,6 +107,11 @@ casper.then(function() {
 				}
 			},
 
+			/**
+			 * Calculate average square size of all <img> elements in the page
+			 * @param {NodeList} images
+			 * @return {Number}
+			 */
 			getAverageSquareSize: function(images) {
 
 				var n_images = images.length;
@@ -103,9 +124,11 @@ casper.then(function() {
 				return total_square_size/n_images;
 			},
 
-			// Functions related to get the logo
-
-			// Get just the images that are in the top of the page
+			/**
+			 * Score up the images that are likely to be on the very top of the page (likely to be a logo)
+			 * @param {NodeList} images
+			 * @param {Number} top_limit
+			 */
 			prizeTopImages: function(top_limit, images) {
 
 				for (var i=0; i < images.length; i++) {
@@ -116,6 +139,10 @@ casper.then(function() {
 				}
 			},
 
+			/**
+			 * Score up the images that contain the word logo in their src 
+			 * @param {NodeList} images
+			 */
 			prizeWithLogoInName: function(images) {
 
 				for (var i=0; i < images.length; i++) {
@@ -125,6 +152,10 @@ casper.then(function() {
 				}
 			}, 
 
+			/**
+			 * Score up the images that are in PNG format (logos usually have that format) 
+			 * @param {NodeList} images
+			 */
 			prizePNG: function(images) {
 
 				for (var i=0; i < images.length; i++) {
@@ -134,6 +165,10 @@ casper.then(function() {
 				}	
 			},
 
+			/**
+			 * Score up the anchors that have href pointing to the root of the site 
+			 * @param {NodeList} anchors
+			 */
 			scoreHrefRoot: function(anchors) {
 
 				var possible_hosts = parseAds.possibleHosts();
@@ -148,15 +183,6 @@ casper.then(function() {
 				}
 			},
 
-			//Sometimes the href is not pointing to the root, but it's actually the logo (just score if it says logo in url name, class or id
-			/*scoreHrefNonRoot: function(anchors) {*/
-
-				//for (var i = 0; i < anchors.length; i++) {
-					
-					//if (anchors[i].hasAttribute("class") &&  anchors[i].indexOf("logo") != -1) {
-					//}
-				//}	
-			/*},*/
 
 			scoreParentAnchor: function(images) {
 
@@ -172,6 +198,10 @@ casper.then(function() {
 				}
 			},
 
+			/**
+			 * If the anchor or parent has a background-image, give it a good score (we already know they are pointing to the root of the site). 
+			 * @param {Node} anchor
+			 */
 			scoreBackground: function(anchor) {
 
 				// Look at the element itself
@@ -189,9 +219,12 @@ casper.then(function() {
 					}
 				}
 
-				// Sometimes the anchor can have a 
 			},
 
+			/**
+			 * Returns the possible hosts with all the combinations (http,https,www...)
+			 * @return {Array}
+			 */
 			possibleHosts: function() {
 
 				var host = location.host; 
@@ -221,20 +254,22 @@ casper.then(function() {
 					possible_hosts.push("https://" + host.replace('www.', '') + '/');
 				}
 
-				//console.log("possible hosts are: ");
-				/*for (var i = 0; i < possible_hosts.length; i++) {*/
-					//console.log(possible_hosts[i]);
-				/*}*/
-
 				return possible_hosts;
 			},
 
+			/**
+			 * Get all <a> elements in the page
+			 * @return {NodeList}
+			 */
 			getAllAnchors: function() {
 
 				return document.getElementsByTagName('a');
 			},
 
-			//Get all images from the page
+			/**
+			 * Get all <a> elements in the page
+			 * @return {NodeList}
+			 */
 			getAllImages: function() {
 
 				return document.getElementsByTagName('img');
@@ -250,7 +285,6 @@ casper.then(function() {
 		var images = parseAds.getAllImages();
 
 		/* Get product image */ 
-		/* TODO -> Remove images that are really small */
 		parseAds.setSquareSizes(images);
 		parseAds.initializeScores(images,0);
 
